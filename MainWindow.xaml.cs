@@ -509,11 +509,14 @@ public partial class MainWindow : Window
                 dependencyVersion = await FindCompatibleModVersionAsync(dependency.ProjectId, gameVersion, loader);
             }
 
-            if (dependencyVersion is not null)
-            {
-                installedCount += await InstallModVersionWithDependenciesAsync(
-                    dependencyVersion, gameVersion, loader, installedVersions);
-            }
+            if (dependencyVersion is null)
+                throw new InvalidOperationException("A required mod dependency has no compatible Fabric or Quilt version.");
+            if (!dependencyVersion.GameVersions.Contains(gameVersion, StringComparer.OrdinalIgnoreCase) ||
+                !dependencyVersion.Loaders.Contains(loader, StringComparer.OrdinalIgnoreCase))
+                throw new InvalidOperationException("A required mod dependency is not compatible with the selected Minecraft profile.");
+
+            installedCount += await InstallModVersionWithDependenciesAsync(
+                dependencyVersion, gameVersion, loader, installedVersions);
         }
 
         var file = SelectPrimaryFile(version);
@@ -584,9 +587,14 @@ public partial class MainWindow : Window
                 loader = "Quilt";
                 loaderVersion = quilt.GetString();
             }
+            else if (dependencies.TryGetProperty("forge", out _) || dependencies.TryGetProperty("neoforge", out _))
+            {
+                throw new InvalidOperationException("This pack uses Forge or NeoForge. This launcher currently installs Fabric and Quilt packs.");
+            }
             else
             {
-                throw new InvalidOperationException("This pack uses Forge, NeoForge, or another loader. This launcher currently installs Fabric and Quilt packs.");
+                loader = "Vanilla";
+                loaderVersion = null;
             }
 
             SetMinecraftVersion(gameVersion);
