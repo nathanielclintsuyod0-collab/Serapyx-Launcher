@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using CmlLib.Core;
 using CmlLib.Core.Auth;
@@ -423,6 +424,11 @@ public partial class MainWindow : Window
             ModrinthSearchButton.IsEnabled = true;
             EndBusy();
         }
+    }
+
+    private void ModrinthSearchBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) SearchModrinth_Click(sender, e);
     }
 
     private async void InstallModrinthProject_Click(object sender, RoutedEventArgs e)
