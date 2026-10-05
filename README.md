@@ -13,7 +13,7 @@ An original Windows launcher project for Seraphyx SMP. It uses a separate game f
 
 The library searches Modrinth for mods, modpacks, resource packs, and shaders compatible with the selected Minecraft version. Resource packs and shaders are downloaded into the launcher's separate game folder. Mods install their required Modrinth dependencies and use Fabric or Quilt. Modpacks install their included files, overrides, and Fabric or Quilt profile. Forge and NeoForge modpacks are shown in search but are not currently installable by this launcher. Optional modpack files are skipped.
 
-Content is installed into one Seraphyx game folder under `%APPDATA%\SeraphyxLauncher\game`. Use **Open game folder** to view or manage installed content. Resource packs need to be enabled in Minecraft's resource pack menu, and shaders require a shader loader such as Iris.
+Content is installed into one Seraphyx game folder under `%APPDATA%\SeraphyxLauncher\game`. Use **Open game folder** to view or manage installed content. Multiple modpacks share that folder, so install one pack at a time to avoid conflicting mods. Resource packs need to be enabled in Minecraft's resource pack menu, and shaders require a shader loader such as Iris.
 
 The local profile field is used only by offline single-player. It does not create a Microsoft/Minecraft account or grant server access. Microsoft passwords are entered in the authentication flow, never in this launcher.
 
