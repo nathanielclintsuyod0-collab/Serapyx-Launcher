@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   publish:
@@ -39,12 +39,26 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SeraphyxLauncher-windows-x64
-          path: .\publish\SeraphyxLauncher-windows-x64.zip
+          path: |
+            .\publish\SeraphyxLauncher.exe
+            .\publish\SeraphyxLauncher-windows-x64.zip
           if-no-files-found: error
           retention-days: 30
 
+  release:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[release]')
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: SeraphyxLauncher-windows-x64
+          path: release-files
+
       - name: Publish official 1.0 release
-        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[release]') }}
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v1.0.0
@@ -58,6 +72,6 @@ jobs:
 
             Offline profiles are for single-player only. Connecting to multiplayer servers requires Microsoft sign-in. Forge and NeoForge modpacks are not currently installable.
           files: |
-            publish/SeraphyxLauncher.exe
-            publish/SeraphyxLauncher-windows-x64.zip
+            release-files/SeraphyxLauncher.exe
+            release-files/SeraphyxLauncher-windows-x64.zip
 
