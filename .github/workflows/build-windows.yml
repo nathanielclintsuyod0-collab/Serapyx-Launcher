@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   publish:
@@ -32,10 +32,32 @@ jobs:
           -p:IncludeNativeLibrariesForSelfExtract=true
           --output .\publish
 
+      - name: Package Windows download
+        run: Compress-Archive -Path .\publish\SeraphyxLauncher.exe -DestinationPath .\publish\SeraphyxLauncher-windows-x64.zip -Force
+
       - name: Upload launcher artifact
         uses: actions/upload-artifact@v4
         with:
           name: SeraphyxLauncher-windows-x64
-          path: .\publish\SeraphyxLauncher.exe
+          path: .\publish\SeraphyxLauncher-windows-x64.zip
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish official 1.0 release
+        if: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[release]') }}
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v1.0.0
+          target_commitish: ${{ github.sha }}
+          name: Seraphyx Launcher 1.0
+          make_latest: true
+          body: |
+            The first official Seraphyx Launcher release.
+
+            This Windows x64 build includes the custom Seraphyx application icon, selectable Minecraft versions, Vanilla/Fabric/Quilt profiles, a performance preset panel, and Modrinth browsing for mods, modpacks, resource packs, and shaders.
+
+            Offline profiles are for single-player only. Connecting to multiplayer servers requires Microsoft sign-in. Forge and NeoForge modpacks are not currently installable.
+          files: |
+            publish/SeraphyxLauncher.exe
+            publish/SeraphyxLauncher-windows-x64.zip
+
