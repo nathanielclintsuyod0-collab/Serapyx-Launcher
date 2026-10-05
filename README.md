@@ -32,9 +32,9 @@ dotnet run
 
 ## Download a built launcher
 
-GitHub Actions builds a self-contained Windows x64 executable whenever code is pushed to `main`. Open the repository's **Actions** tab, select **Build Windows Launcher**, open the latest successful run, and download the `SeraphyxLauncher-windows-x64` artifact. Extract the downloaded ZIP and run `SeraphyxLauncher.exe`.
+Download the latest official Windows x64 build from [GitHub Releases](https://github.com/nathanielclintsuyod0-collab/Serapyx-Launcher/releases/latest). Download `SeraphyxLauncher-windows-x64.zip`, extract it, and run `SeraphyxLauncher.exe`. The launcher is self-contained and includes its custom Seraphyx icon.
 
-You can also start a build manually from **Actions** by selecting **Build Windows Launcher** and choosing **Run workflow**.
+GitHub Actions also keeps a temporary build artifact for each successful build. Open the repository's **Actions** tab, select **Build Windows Launcher**, open a successful run, and download `SeraphyxLauncher-windows-x64`.
 
 The project uses CmlLib.Core and CmlLib.Core.Auth.Microsoft for Minecraft installation/launch and Microsoft authentication. Both packages are MIT licensed. Preserve their license notices if you redistribute the launcher.
 
