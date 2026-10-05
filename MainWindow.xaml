@@ -221,14 +221,14 @@
                                 </StackPanel>
                                 <StackPanel Grid.Column="2">
                                     <TextBlock Text="SEARCH MODRINTH" FontSize="10" Foreground="#BBA8E8" FontWeight="Bold" Margin="0,0,0,6" />
-                                    <TextBox x:Name="ModrinthSearchBox" Style="{StaticResource Field}" ToolTip="Search Modrinth" />
+                                    <TextBox x:Name="ModrinthSearchBox" Style="{StaticResource Field}" ToolTip="Search Modrinth" KeyDown="ModrinthSearchBox_KeyDown" />
                                 </StackPanel>
                                 <Button x:Name="ModrinthSearchButton" Grid.Column="4" Style="{StaticResource AccentButton}" Content="Search" Click="SearchModrinth_Click" VerticalAlignment="Bottom" />
                             </Grid>
                         </Border>
 
                         <Border Background="#171126" BorderBrush="#3B2D58" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
-                            <TextBlock Text="Compatible mods install with Fabric or Quilt. Modpacks install their included client files and supported loader. Resource packs work on vanilla; shaders need a shader mod such as Iris." FontSize="11" Foreground="{StaticResource Muted}" TextWrapping="Wrap" />
+                            <TextBlock Text="Compatible mods install with Fabric or Quilt. Modpacks install their included client files and supported loader. Resource packs work on vanilla; shaders need a shader mod such as Iris. Everything installs to this launcher’s shared game folder, so use one modpack at a time." FontSize="11" Foreground="{StaticResource Muted}" TextWrapping="Wrap" />
                         </Border>
 
                         <Grid Margin="2,0,2,10">
