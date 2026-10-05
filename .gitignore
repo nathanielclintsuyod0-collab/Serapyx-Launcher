@@ -1,0 +1,7 @@
+bin/
+obj/
+publish/
+.buildtools/
+.dotnet/
+.nuget/
+
