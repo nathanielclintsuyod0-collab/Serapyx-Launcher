@@ -27,6 +27,9 @@ public partial class MainWindow : Window
     private const int DefaultServerPort = 20021;
     private static readonly HttpClient ModrinthClient = CreateModrinthClient();
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private static readonly HashSet<string> AllowedDownloadHosts = new(StringComparer.OrdinalIgnoreCase)
+        { "cdn.modrinth.com", "github.com", "raw.githubusercontent.com", "gitlab.com" };
     private readonly string _dataDirectory = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SeraphyxLauncher");
     private readonly LauncherSettings _settings;
@@ -42,10 +45,14 @@ public partial class MainWindow : Window
         InitializeComponent();
         Directory.CreateDirectory(_dataDirectory);
         _settings = LoadSettings();
-        GameDirectoryText();
+        InitializeLauncher();
         LoadSettingsIntoUi();
         UpdateModeUi();
-        Loaded += async (_, _) => await LoadMinecraftVersionsAsync();
+        Loaded += async (_, _) =>
+        {
+            await LoadMinecraftVersionsAsync();
+            await TrySilentSignInAsync();
+        };
         Closing += (_, _) => SaveSettings();
     }
 
@@ -61,9 +68,15 @@ public partial class MainWindow : Window
     private string GameDirectory => Path.Combine(_dataDirectory, "game");
     private string SettingsPath => Path.Combine(_dataDirectory, "launcher-settings.json");
 
-    private void GameDirectoryText()
+    private void InitializeLauncher()
     {
         _launcher = new MinecraftLauncher(new MinecraftPath(GameDirectory));
+        _launcher.FileProgressChanged += (_, e) => Dispatcher.Invoke(() =>
+        {
+            LaunchProgress.IsIndeterminate = false;
+            LaunchProgress.Value = e.TotalTasks == 0 ? 0 : e.ProgressedTasks * 100.0 / e.TotalTasks;
+            SetStatus($"Downloading {e.Name} ({e.ProgressedTasks}/{e.TotalTasks})");
+        });
     }
 
     private LauncherSettings LoadSettings()
@@ -239,6 +252,24 @@ public partial class MainWindow : Window
         SignInButton.Content = "Sign in with Microsoft";
     }
 
+    private async Task TrySilentSignInAsync()
+    {
+        try
+        {
+            _loginHandler ??= JELoginHandlerBuilder.BuildDefault();
+            var session = await _loginHandler.AuthenticateSilently();
+            if (session is not null && !string.IsNullOrWhiteSpace(session.Username))
+            {
+                _session = session;
+                UpdateModeUi();
+            }
+        }
+        catch
+        {
+            // No cached account yet; the player signs in manually.
+        }
+    }
+
     private async void SignIn_Click(object sender, RoutedEventArgs e)
     {
         if (!BeginBusy("Opening Microsoft sign-in…")) return;
@@ -353,6 +384,12 @@ public partial class MainWindow : Window
             SetStatus(online ? $"Preparing Minecraft {gameVersion}…" : $"Preparing Minecraft {gameVersion} for offline play…");
             var launchVersion = await InstallGameLoaderAsync(gameVersion, loader);
             var process = await _launcher.InstallAndBuildProcessAsync(launchVersion, options);
+            process.EnableRaisingEvents = true;
+            process.Exited += (_, _) => Dispatcher.Invoke(() =>
+            {
+                if (process.ExitCode != 0)
+                    SetStatus($"Minecraft exited with code {process.ExitCode}. Check the logs folder in the game directory.", isError: true);
+            });
             process.Start();
             LaunchProgress.Value = 100;
             SetStatus(online
@@ -397,11 +434,14 @@ public partial class MainWindow : Window
         ModrinthSearchButton.IsEnabled = false;
         try
         {
-            var facets = JsonSerializer.Serialize(new[]
+            var facetList = new List<string[]>
             {
                 new[] { $"project_type:{contentType}" },
                 new[] { $"versions:{gameVersion}" }
-            });
+            };
+            if (contentType is "mod" or "modpack")
+                facetList.Add(new[] { "categories:fabric", "categories:quilt" });
+            var facets = JsonSerializer.Serialize(facetList);
             var url = "https://api.modrinth.com/v2/search?query=" + Uri.EscapeDataString(query)
                 + "&facets=" + Uri.EscapeDataString(facets)
                 + "&index=downloads&limit=30";
@@ -616,7 +656,8 @@ public partial class MainWindow : Window
                 {
                     if (packFile.TryGetProperty("env", out var env) &&
                         env.TryGetProperty("client", out var clientEnvironment) &&
-                        string.Equals(clientEnvironment.GetString(), "unsupported", StringComparison.OrdinalIgnoreCase))
+                        (string.Equals(clientEnvironment.GetString(), "unsupported", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(clientEnvironment.GetString(), "optional", StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
@@ -749,6 +790,11 @@ public partial class MainWindow : Window
         {
             throw new InvalidDataException("Modrinth provided a download link that is not a secure HTTPS address.");
         }
+
+        if (!AllowedDownloadHosts.Contains(uri.Host))
+        {
+            throw new InvalidDataException($"Downloads from {uri.Host} are not allowed.");
+        }
         if (!hashes.ContainsKey("sha1") && !hashes.ContainsKey("sha512"))
             throw new InvalidDataException("The downloaded content has no supported integrity hash.");
 
@@ -840,18 +886,18 @@ public partial class MainWindow : Window
         {
             "Performance" => new Dictionary<string, string>
             {
-                ["renderDistance"] = "6", ["simulationDistance"] = "5", ["graphicsMode"] = "1",
-                ["particles"] = "2", ["entityDistanceScaling"] = "0.5", ["clouds"] = "0", ["mipmapLevels"] = "0"
+                ["renderDistance"] = "6", ["simulationDistance"] = "5", ["graphicsMode"] = "0",
+                ["particles"] = "2", ["entityDistanceScaling"] = "0.5", ["renderClouds"] = "\"false\"", ["mipmapLevels"] = "0"
             },
             "Quality" => new Dictionary<string, string>
             {
-                ["renderDistance"] = "14", ["simulationDistance"] = "10", ["graphicsMode"] = "0",
-                ["particles"] = "0", ["entityDistanceScaling"] = "1.0", ["clouds"] = "2", ["mipmapLevels"] = "4"
+                ["renderDistance"] = "14", ["simulationDistance"] = "10", ["graphicsMode"] = "1",
+                ["particles"] = "0", ["entityDistanceScaling"] = "1.0", ["renderClouds"] = "\"true\"", ["mipmapLevels"] = "4"
             },
             _ => new Dictionary<string, string>
             {
                 ["renderDistance"] = "10", ["simulationDistance"] = "8", ["graphicsMode"] = "1",
-                ["particles"] = "1", ["entityDistanceScaling"] = "0.75", ["clouds"] = "1", ["mipmapLevels"] = "2"
+                ["particles"] = "1", ["entityDistanceScaling"] = "0.75", ["renderClouds"] = "\"fast\"", ["mipmapLevels"] = "2"
             }
         };
 
