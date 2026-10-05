@@ -117,15 +117,13 @@ public partial class MainWindow : Window
                 FooterHint.Text = "Online mode requires a Microsoft account with Minecraft: Java Edition access.";
                 break;
             case "Offline":
-                ModeDescription.Text = _session is null
-                    ? "Sign in online first during this launcher session. Offline mode then opens single-player only."
-                    : "Authenticated profile is available for offline single-player. Server auto-connect is disabled.";
+                ModeDescription.Text = "Use your local launcher nickname for single-player. Microsoft sign-in is not needed.";
                 LaunchButton.Content = "LAUNCH OFFLINE";
-                ModeBadge.Text = _session is null ? "SIGN IN FIRST" : "OFFLINE SINGLE-PLAYER";
-                SignInButton.Visibility = Visibility.Visible;
+                ModeBadge.Text = string.IsNullOrWhiteSpace(LocalProfileBox.Text) ? "SET NICKNAME" : "LOCAL SINGLE-PLAYER";
+                SignInButton.Visibility = Visibility.Collapsed;
                 ServerHostBox.IsEnabled = false;
                 ServerPortBox.IsEnabled = false;
-                FooterHint.Text = "Offline mode cannot connect to Seraphyx or any multiplayer server.";
+                FooterHint.Text = "No Microsoft sign-in. Local single-player only; this mode cannot join servers.";
                 break;
             default:
                 ModeDescription.Text = "Preview the launcher and optimizer without starting Minecraft or connecting to a server.";
@@ -138,12 +136,23 @@ public partial class MainWindow : Window
                 break;
         }
 
-        AccountStatus.Text = _session is null
-            ? "No Microsoft profile connected"
-            : "Signed in as " + _session.Username + " — verified for this session";
-        AccountStatus.Foreground = _session is null
-            ? (Brush)FindResource("Muted")
-            : (Brush)FindResource("Green");
+        if (SelectedMode == "Offline")
+        {
+            var localName = LocalProfileBox.Text.Trim();
+            AccountStatus.Text = localName.Length == 0
+                ? "Enter a local nickname to launch single-player"
+                : "Local single-player profile: " + localName;
+            AccountStatus.Foreground = (Brush)FindResource(localName.Length == 0 ? "Muted" : "Lavender");
+        }
+        else
+        {
+            AccountStatus.Text = _session is null
+                ? "No Microsoft profile connected"
+                : "Signed in as " + _session.Username + " — verified for this session";
+            AccountStatus.Foreground = _session is null
+                ? (Brush)FindResource("Muted")
+                : (Brush)FindResource("Green");
+        }
         SignInButton.Content = "Sign in with Microsoft";
     }
 
@@ -184,6 +193,7 @@ public partial class MainWindow : Window
 
         _settings.LocalProfile = name;
         SaveSettings();
+        UpdateModeUi();
         SetStatus(name.Length == 0 ? "Local launcher nickname cleared." : $"Saved local launcher nickname: {name}.");
     }
 
@@ -198,9 +208,18 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_session is null)
+        var online = SelectedMode == "Online";
+        var offlineUsername = LocalProfileBox.Text.Trim();
+
+        if (online && _session is null)
         {
-            SetStatus("Sign in with Microsoft first. The local nickname is not a Minecraft account.", isError: true);
+            SetStatus("Sign in with Microsoft first. Online play requires a Java Edition profile.", isError: true);
+            return;
+        }
+
+        if (!online && SelectedMode == "Offline" && !Regex.IsMatch(offlineUsername, "^[A-Za-z0-9_]{1,16}$"))
+        {
+            SetStatus("Enter a local nickname of 1–16 letters, numbers, or underscores for single-player.", isError: true);
             return;
         }
 
@@ -210,7 +229,6 @@ public partial class MainWindow : Window
             return;
         }
 
-        var online = SelectedMode == "Online";
         if (online)
         {
             if (string.IsNullOrWhiteSpace(ServerHostBox.Text) || !int.TryParse(ServerPortBox.Text, out var port) || port is < 1 or > 65535)
@@ -220,10 +238,10 @@ public partial class MainWindow : Window
             }
         }
 
-        await LaunchMinecraftAsync(online);
+        await LaunchMinecraftAsync(online, offlineUsername);
     }
 
-    private async Task LaunchMinecraftAsync(bool online)
+    private async Task LaunchMinecraftAsync(bool online, string offlineUsername)
     {
         if (!BeginBusy(online ? "Preparing Seraphyx…" : "Preparing offline single-player…")) return;
         LaunchProgress.Visibility = Visibility.Visible;
@@ -235,9 +253,10 @@ public partial class MainWindow : Window
             Directory.CreateDirectory(GameDirectory);
             ApplyGameOptions(backupExisting: true);
             _launcher ??= new MinecraftLauncher(new MinecraftPath(GameDirectory));
+            var launchSession = online ? _session! : MSession.CreateOfflineSession(offlineUsername);
             var options = new MLaunchOption
             {
-                Session = _session,
+                Session = launchSession,
                 MaximumRamMb = (int)MemorySlider.Value
             };
 

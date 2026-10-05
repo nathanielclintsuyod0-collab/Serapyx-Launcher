@@ -108,7 +108,7 @@
                                     <ComboBox x:Name="ModeBox" Style="{StaticResource ComboField}" Margin="0,10,0,0" SelectedIndex="0" SelectionChanged="ModeBox_SelectionChanged">
                                         <ComboBoxItem Content="Preview mode — no account" Tag="Preview" />
                                         <ComboBoxItem Content="Online — Microsoft account" Tag="Online" />
-                                        <ComboBoxItem Content="Offline — cached account, single-player" Tag="Offline" />
+                                        <ComboBoxItem Content="Offline — local single-player, no Microsoft" Tag="Offline" />
                                     </ComboBox>
                                     <TextBlock x:Name="ModeDescription" Text="Preview the launcher and optimizer without starting Minecraft." FontSize="11" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,9,0,0" />
                                     <Button x:Name="SignInButton" Style="{StaticResource ButtonBase}" Content="Sign in with Microsoft" Click="SignIn_Click" Margin="0,14,0,0" HorizontalAlignment="Left" />
@@ -119,12 +119,12 @@
                             <Border Grid.Column="2" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="10" Padding="19">
                                 <StackPanel>
                                     <TextBlock Text="LOCAL LAUNCHER PROFILE" FontSize="10" Foreground="#BBA8E8" FontWeight="Bold" />
-                                    <TextBlock Text="A nickname for this launcher only" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,6,0,10" />
+                                    <TextBlock Text="Used as your local single-player profile" FontSize="11" Foreground="{StaticResource Muted}" Margin="0,6,0,10" />
                                     <DockPanel>
                                         <Button DockPanel.Dock="Right" Style="{StaticResource ButtonBase}" Content="Save" Click="SaveLocalProfile_Click" Padding="13,9" Margin="9,0,0,0" />
                                         <TextBox x:Name="LocalProfileBox" Style="{StaticResource Field}" MaxLength="16" ToolTip="Launcher display name; not a Minecraft login" />
                                     </DockPanel>
-                                    <TextBlock Text="This name does not authenticate Minecraft or grant server access." FontSize="10" Foreground="#A79ABF" TextWrapping="Wrap" Margin="0,9,0,0" />
+                                    <TextBlock Text="Offline mode uses this name locally. It does not grant multiplayer or server access." FontSize="10" Foreground="#A79ABF" TextWrapping="Wrap" Margin="0,9,0,0" />
                                 </StackPanel>
                             </Border>
                         </Grid>
@@ -224,7 +224,7 @@
                             <TextBlock Text="ABOUT SERAPHYX LAUNCHER" FontSize="10" Foreground="#BBA8E8" FontWeight="Bold" />
                             <TextBlock Text="An independent launcher for Seraphyx SMP" FontSize="23" FontWeight="SemiBold" Margin="0,9,0,0" />
                             <TextBlock Text="This launcher is not affiliated with Microsoft or Mojang Studios. Microsoft sign-in is handled by the authentication library; the launcher never asks for your Microsoft password directly." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,10,0,0" />
-                            <TextBlock Text="Preview mode simulates launcher activity without launching Minecraft. Offline mode is single-player only and requires an account authenticated earlier in this launcher session. Use Online mode to connect to Seraphyx." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,12,0,0" />
+                            <TextBlock Text="Preview mode simulates launcher activity without launching Minecraft. Offline mode uses your local nickname for single-player and does not require Microsoft sign-in; game files may still need to download on first launch. Use Online mode and a valid Java Edition profile to connect to Seraphyx." FontSize="12" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Margin="0,12,0,0" />
                         </StackPanel>
                     </Border>
                 </ScrollViewer>

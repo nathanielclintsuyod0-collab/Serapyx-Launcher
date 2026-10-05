@@ -4,28 +4,34 @@ An original Windows launcher project for Seraphyx SMP. It uses a separate game f
 
 ## Modes
 
-- **Online:** Sign in through Microsoft, then launch the selected Java version and connect to the configured Seraphyx address. A valid Java Edition profile is required.
-- **Offline:** Uses the Microsoft-authenticated profile already obtained in the current launcher session and launches single-player only.
-- **Preview:** Simulates the launcher flow without starting Minecraft.
+- **Online:** Sign in through Microsoft, then launch the selected Java version and connect directly to the configured Seraphyx address.
+- **Offline:** Uses the local launcher nickname as an offline profile to launch single-player without Microsoft sign-in. This mode cannot connect to servers. The first launch may still need internet access to download Minecraft files.
+- **Preview:** Requires no account; simulates the launcher flow without starting Minecraft.
 
-The local profile field is only a saved launcher nickname. It does not create a Minecraft identity or grant server access. Microsoft passwords are entered in the authentication flow, never in this launcher.
+The local profile field is used only by offline single-player. It does not create a Microsoft/Minecraft account or grant server access. Microsoft passwords are entered in the authentication flow, never in this launcher.
 
 ## Performance optimizer
 
-Balanced, Higher FPS, and Visual quality presets adjust memory allocation and common video settings in the isolated Seraphyx game directory. Existing options are backed up before changes. The optimizer does not alter Windows registry settings or terminate other apps.
+The optimizer provides Balanced, Higher FPS, and Visual quality presets. It adjusts the game's memory allocation and common video settings in the isolated Seraphyx game directory. It creates `options.txt.seraphyx-backup` before changing an existing `options.txt`; it does not alter Windows registry settings, terminate other apps, or claim to improve hardware.
+
+## Build on Windows
+
+Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), then double-click `Start-Preview.cmd` or open this folder in a terminal and run:
+
+```powershell
+dotnet restore
+dotnet run
+```
 
 ## Download a built launcher
 
-GitHub Actions builds a self-contained Windows x64 executable whenever code is pushed to `main`. Open the repository's **Actions** tab, select **Build Windows Launcher**, open the latest successful run, and download the `SeraphyxLauncher-windows-x64` artifact. Extract the ZIP and run `SeraphyxLauncher.exe`.
+GitHub Actions builds a self-contained Windows x64 executable whenever code is pushed to `main`. Open the repository's **Actions** tab, select **Build Windows Launcher**, open the latest successful run, and download the `SeraphyxLauncher-windows-x64` artifact. Extract the downloaded ZIP and run `SeraphyxLauncher.exe`.
 
 You can also start a build manually from **Actions** by selecting **Build Windows Launcher** and choosing **Run workflow**.
 
-## Build locally
+The project uses CmlLib.Core and CmlLib.Core.Auth.Microsoft for Minecraft installation/launch and Microsoft authentication. Both packages are MIT licensed. Preserve their license notices if you redistribute the launcher.
 
-Install the [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0), then run `dotnet restore` and `dotnet run` in this folder.
-
-This project uses CmlLib.Core and CmlLib.Core.Auth.Microsoft for Minecraft installation/launch and Microsoft authentication. Both packages are MIT licensed. Preserve their license notices if redistributing the launcher.
-
-The default server (`seraphyx.atbp.fun:20021`) and Minecraft version (`1.21.4`) can be changed in the launcher.
+The server defaults (`seraphyx.atbp.fun:20021`) and Minecraft version (`1.21.4`) are editable in the launcher.
 
 This is an independent community project and is not affiliated with Mojang Studios or Microsoft.
+
