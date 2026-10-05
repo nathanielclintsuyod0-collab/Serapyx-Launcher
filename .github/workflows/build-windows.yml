@@ -1,8 +1,6 @@
 name: Build Windows Launcher
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -39,4 +37,3 @@ jobs:
           path: .\publish\SeraphyxLauncher.exe
           if-no-files-found: error
           retention-days: 30
-
