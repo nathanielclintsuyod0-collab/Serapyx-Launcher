@@ -3,12 +3,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-        <SolidColorBrush x:Key="Bg" Color="#0D0917" />
-        <SolidColorBrush x:Key="Panel" Color="#171126" />
-        <SolidColorBrush x:Key="PanelRaised" Color="#201733" />
-        <SolidColorBrush x:Key="Line" Color="#3B2D58" />
-        <SolidColorBrush x:Key="Purple" Color="#9B75EF" />
-        <SolidColorBrush x:Key="Lavender" Color="#D9CCFF" />
+        <LinearGradientBrush x:Key="Bg" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#0B0913" Offset="0" />
+            <GradientStop Color="#141020" Offset="0.58" />
+            <GradientStop Color="#1B1429" Offset="1" />
+        </LinearGradientBrush>
+        <SolidColorBrush x:Key="Panel" Color="#171421" />
+        <SolidColorBrush x:Key="PanelRaised" Color="#241C34" />
+        <SolidColorBrush x:Key="Line" Color="#403452" />
+        <SolidColorBrush x:Key="Purple" Color="#A985F7" />
+        <SolidColorBrush x:Key="Lavender" Color="#E1D5FF" />
         <SolidColorBrush x:Key="Muted" Color="#A79ABF" />
         <SolidColorBrush x:Key="Green" Color="#88D8B0" />
         <SolidColorBrush x:Key="Danger" Color="#F08FA7" />
@@ -59,21 +63,46 @@
 
         <Style x:Key="Field" TargetType="TextBox">
             <Setter Property="Foreground" Value="#F5F0FF" />
-            <Setter Property="Background" Value="#100C1B" />
-            <Setter Property="BorderBrush" Value="#473661" />
+            <Setter Property="Background" Value="#110E1A" />
+            <Setter Property="BorderBrush" Value="#4A3B61" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="11,9" />
+            <Setter Property="Padding" Value="12,10" />
             <Setter Property="CaretBrush" Value="#D9CCFF" />
             <Setter Property="FontSize" Value="14" />
         </Style>
 
+        <Style x:Key="DarkComboItem" TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="#F5F0FF" />
+            <Setter Property="Background" Value="#171421" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#302546" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="#3A2B56" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="ComboField" TargetType="ComboBox">
             <Setter Property="Foreground" Value="#F5F0FF" />
-            <Setter Property="Background" Value="#100C1B" />
-            <Setter Property="BorderBrush" Value="#473661" />
+            <Setter Property="Background" Value="#110E1A" />
+            <Setter Property="BorderBrush" Value="#4A3B61" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="9,7" />
+            <Setter Property="Padding" Value="10,8" />
             <Setter Property="FontSize" Value="14" />
+            <Setter Property="ItemContainerStyle" Value="{StaticResource DarkComboItem}" />
+            <Setter Property="MaxDropDownHeight" Value="420" />
         </Style>
     </Application.Resources>
 </Application>
