@@ -1,0 +1,79 @@
+name: Release Seraphyx Launcher
+
+# Publishes an official GitHub Release with a downloadable Windows launcher.
+#   Option A: push a tag, e.g.  git tag v1.0.0 && git push origin v1.0.0
+#   Option B: Actions tab -> "Release Seraphyx Launcher" -> Run workflow -> type a version
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, for example 1.0.0"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Work out the version
+        id: version
+        shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            VERSION="$INPUT_VERSION"
+          else
+            VERSION="$REF_NAME"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish a self-contained Windows build
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: >
+          dotnet publish SeraphyxLauncher.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:Version=$VERSION
+          -o publish
+
+      - name: Package the download files
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          Copy-Item "publish/SeraphyxLauncher.exe" "SeraphyxLauncher-v$env:VERSION-win-x64.exe"
+          Compress-Archive -Path "publish/SeraphyxLauncher.exe" -DestinationPath "SeraphyxLauncher-v$env:VERSION-win-x64.zip"
+
+      - name: Create the GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" \
+            "SeraphyxLauncher-v$VERSION-win-x64.zip" \
+            "SeraphyxLauncher-v$VERSION-win-x64.exe" \
+            --title "Seraphyx Launcher v$VERSION" \
+            --generate-notes \
+            --target "$GITHUB_SHA"

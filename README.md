@@ -6,7 +6,6 @@ An original Windows launcher project for Seraphyx SMP. It uses a separate game f
 
 - **Online:** Sign in through Microsoft, then launch the selected Java version and connect directly to the configured Seraphyx address.
 - **Offline:** Uses the local launcher nickname as an offline profile to launch single-player without Microsoft sign-in. This mode cannot connect to servers. The first launch may still need internet access to download Minecraft files.
-- **Preview:** Requires no account; simulates the launcher flow without starting Minecraft.
 - Minecraft releases are loaded into a version picker, so players can choose a version instead of typing one.
 
 ## Modrinth library
@@ -38,7 +37,7 @@ You can also start a build manually from **Actions** by selecting **Build Window
 
 The project uses CmlLib.Core and CmlLib.Core.Auth.Microsoft for Minecraft installation/launch and Microsoft authentication. Both packages are MIT licensed. Preserve their license notices if you redistribute the launcher.
 
-The server defaults (`seraphyx.atbp.fun:20021`) and Minecraft version (`1.21.4`) are editable in the launcher.
+In Online mode the launcher joins seraphyx.atbp.fun:20021.
 
 This is an independent community project and is not affiliated with Mojang Studios or Microsoft.
 

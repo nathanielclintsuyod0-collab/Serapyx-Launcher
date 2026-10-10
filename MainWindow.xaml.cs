@@ -48,6 +48,7 @@ public partial class MainWindow : Window
         InitializeLauncher();
         LoadSettingsIntoUi();
         UpdateModeUi();
+        VersionLabel.Text = "v" + (typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "dev");
         Loaded += async (_, _) =>
         {
             await LoadMinecraftVersionsAsync();
@@ -105,8 +106,6 @@ public partial class MainWindow : Window
         VersionBox.ItemsSource = _minecraftVersions;
         VersionBox.SelectedItem = _settings.Version;
         SelectGameLoader(_settings.Loader);
-        ServerHostBox.Text = _settings.ServerHost;
-        ServerPortBox.Text = _settings.ServerPort.ToString();
 
         var availableMb = (int)(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / 1024 / 1024);
         var safeCap = availableMb > 0 ? Math.Clamp(availableMb / 2, 2048, 8192) : 8192;
@@ -124,8 +123,6 @@ public partial class MainWindow : Window
         _settings.LocalProfile = LocalProfileBox.Text.Trim();
         _settings.Version = SelectedMinecraftVersion;
         _settings.Loader = SelectedGameLoader;
-        _settings.ServerHost = ServerHostBox.Text.Trim();
-        _settings.ServerPort = int.TryParse(ServerPortBox.Text, out var port) ? port : DefaultServerPort;
         _settings.MemoryMb = (int)MemorySlider.Value;
         try
         {
@@ -138,7 +135,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private string SelectedMode => (ModeBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Preview";
+    private string SelectedMode => (ModeBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Online";
     private string SelectedMinecraftVersion => VersionBox.SelectedItem?.ToString() ?? _settings.Version;
     private string SelectedGameLoader => (GameLoaderBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "Vanilla";
 
@@ -157,7 +154,7 @@ public partial class MainWindow : Window
             var releases = (await _launcher.GetAllVersionsAsync())
                 .Where(version => string.Equals(version.Type.ToString(), "Release", StringComparison.OrdinalIgnoreCase))
                 .Select(version => version.Name)
-                .Where(version => !string.IsNullOrWhiteSpace(version))
+                .Where(version => !string.IsNullOrWhiteSpace(version) && Regex.IsMatch(version, @"^\d+(\.\d+){1,2}$"))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
 
@@ -189,6 +186,7 @@ public partial class MainWindow : Window
 
     private void GameLoaderBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        UpdateOptiFineUi();
         if (!_loadingSettings && IsLoaded) SaveSettings();
     }
 
@@ -208,8 +206,6 @@ public partial class MainWindow : Window
                 LaunchButton.Content = "LAUNCH SERAPHYX";
                 ModeBadge.Text = _session is null ? "SIGN-IN REQUIRED" : "MICROSOFT READY";
                 SignInButton.Visibility = Visibility.Visible;
-                ServerHostBox.IsEnabled = true;
-                ServerPortBox.IsEnabled = true;
                 FooterHint.Text = "Online mode requires a Microsoft account with Minecraft: Java Edition access.";
                 break;
             case "Offline":
@@ -217,18 +213,7 @@ public partial class MainWindow : Window
                 LaunchButton.Content = "LAUNCH OFFLINE";
                 ModeBadge.Text = string.IsNullOrWhiteSpace(LocalProfileBox.Text) ? "SET NICKNAME" : "LOCAL SINGLE-PLAYER";
                 SignInButton.Visibility = Visibility.Collapsed;
-                ServerHostBox.IsEnabled = false;
-                ServerPortBox.IsEnabled = false;
                 FooterHint.Text = "No Microsoft sign-in. Local single-player only; this mode cannot join servers.";
-                break;
-            default:
-                ModeDescription.Text = "Preview the launcher and optimizer without starting Minecraft or connecting to a server.";
-                LaunchButton.Content = "RUN PREVIEW";
-                ModeBadge.Text = "PREVIEW READY";
-                SignInButton.Visibility = Visibility.Collapsed;
-                ServerHostBox.IsEnabled = false;
-                ServerPortBox.IsEnabled = false;
-                FooterHint.Text = "Preview works without an account; multiplayer requires Microsoft sign-in.";
                 break;
         }
 
@@ -316,12 +301,6 @@ public partial class MainWindow : Window
         if (_isBusy) return;
         SaveSettings();
 
-        if (SelectedMode == "Preview")
-        {
-            await RunPreviewAsync();
-            return;
-        }
-
         var online = SelectedMode == "Online";
         var offlineUsername = LocalProfileBox.Text.Trim();
 
@@ -342,15 +321,6 @@ public partial class MainWindow : Window
         {
             SetStatus("Choose a Minecraft release version.", isError: true);
             return;
-        }
-
-        if (online)
-        {
-            if (string.IsNullOrWhiteSpace(ServerHostBox.Text) || !int.TryParse(ServerPortBox.Text, out var port) || port is < 1 or > 65535)
-            {
-                SetStatus("Enter a valid server address and port.", isError: true);
-                return;
-            }
         }
 
         await LaunchMinecraftAsync(online, offlineUsername, gameVersion, SelectedGameLoader);
@@ -377,8 +347,8 @@ public partial class MainWindow : Window
 
             if (online)
             {
-                options.ServerIp = ServerHostBox.Text.Trim();
-                options.ServerPort = int.Parse(ServerPortBox.Text);
+                options.ServerIp = DefaultServerHost;
+                options.ServerPort = DefaultServerPort;
             }
 
             SetStatus(online ? $"Preparing Minecraft {gameVersion}…" : $"Preparing Minecraft {gameVersion} for offline play…");
@@ -410,6 +380,11 @@ public partial class MainWindow : Window
 
     private async Task<string> InstallGameLoaderAsync(string gameVersion, string loader, string? loaderVersion = null)
     {
+        if (string.Equals(loader, "OptiFine", StringComparison.OrdinalIgnoreCase))
+        {
+            return ResolveInstalledOptiFineVersion(gameVersion);
+        }
+
         var gamePath = new MinecraftPath(GameDirectory);
         return loader switch
         {
@@ -849,29 +824,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private async Task RunPreviewAsync()
-    {
-        if (!BeginBusy("Running launcher preview…")) return;
-        LaunchProgress.Visibility = Visibility.Visible;
-        LaunchProgress.Value = 0;
-        string[] steps = ["Loading Seraphyx profile…", "Checking optimizer settings…", "Preview complete. Minecraft was not started."];
-        try
-        {
-            for (var i = 0; i < steps.Length; i++)
-            {
-                SetStatus(steps[i]);
-                await Task.Delay(450);
-                LaunchProgress.Value = (i + 1) * 100.0 / steps.Length;
-            }
-            SetStatus("Preview complete — no account or game launch was used.");
-        }
-        finally
-        {
-            LaunchProgress.Visibility = Visibility.Collapsed;
-            EndBusy();
-        }
-    }
-
     private void ApplyGameOptions(bool backupExisting)
     {
         Directory.CreateDirectory(GameDirectory);
@@ -986,6 +938,96 @@ public partial class MainWindow : Window
         }
     }
 
+    private string ResolveInstalledOptiFineVersion(string gameVersion)
+    {
+        var versionsDirectory = Path.Combine(GameDirectory, "versions");
+        if (Directory.Exists(versionsDirectory))
+        {
+            var match = new DirectoryInfo(versionsDirectory).GetDirectories()
+                .Where(directory => directory.Name.StartsWith(gameVersion + "-OptiFine", StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(Path.Combine(directory.FullName, directory.Name + ".json")))
+                .OrderByDescending(directory => directory.LastWriteTimeUtc)
+                .FirstOrDefault();
+
+            if (match is not null)
+            {
+                return match.Name;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"OptiFine is not installed for Minecraft {gameVersion} yet. Click \"Get OptiFine…\" under Game profile and follow the steps.");
+    }
+
+    private void UpdateOptiFineUi()
+    {
+        if (OptiFineHelpButton is null || GameLoaderBox is null)
+        {
+            return;
+        }
+
+        var isOptiFine = (GameLoaderBox.SelectedItem as ComboBoxItem)?.Tag?.ToString() == "OptiFine";
+        OptiFineHelpButton.Visibility = isOptiFine ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void GetOptiFine_Click(object sender, RoutedEventArgs e)
+    {
+        var version = VersionBox.SelectedItem?.ToString() ?? "your Minecraft version";
+        Directory.CreateDirectory(GameDirectory);
+
+        try
+        {
+            Clipboard.SetText(GameDirectory);
+        }
+        catch
+        {
+            // The clipboard can be locked by another program; the folder is shown in the message anyway.
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("https://optifine.net/downloads") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Could not open the OptiFine page: {ex.Message}", isError: true);
+        }
+
+        MessageBox.Show(
+            this,
+            "OptiFine is downloaded from its own website, so the launcher cannot fetch it for you.\n\n" +
+            "1. Launch plain Vanilla " + version + " once from this launcher, so the game files exist.\n" +
+            "2. On the OptiFine page that just opened, download the version for " + version + ".\n" +
+            "3. Run the downloaded file. When it asks for the folder, paste this one (already copied to your clipboard):\n\n" +
+            GameDirectory + "\n\n" +
+            "4. Click Install, then choose the OptiFine game profile here and launch.",
+            "Install OptiFine",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void PlayPageTransition(string page)
+    {
+        FrameworkElement view = page switch
+        {
+            "Modrinth" => ModrinthView,
+            "Optimizer" => OptimizerView,
+            "About" => AboutView,
+            _ => HomeView
+        };
+
+        var slide = new System.Windows.Media.TranslateTransform(0, 18);
+        view.RenderTransform = slide;
+        view.Opacity = 0;
+
+        var duration = TimeSpan.FromMilliseconds(380);
+        var ease = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut };
+        view.BeginAnimation(UIElement.OpacityProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(0, 1, duration) { EasingFunction = ease });
+        slide.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
+            new System.Windows.Media.Animation.DoubleAnimation(18, 0, duration) { EasingFunction = ease });
+    }
+
     private void ShowPage(string page, string title)
     {
         HomeView.Visibility = page == "Home" ? Visibility.Visible : Visibility.Collapsed;
@@ -993,6 +1035,7 @@ public partial class MainWindow : Window
         OptimizerView.Visibility = page == "Optimizer" ? Visibility.Visible : Visibility.Collapsed;
         AboutView.Visibility = page == "About" ? Visibility.Visible : Visibility.Collapsed;
         PageTitle.Text = title;
+        PlayPageTransition(page);
         PageEyebrow.Text = page switch
         {
             "Modrinth" => "MODRINTH / COMMUNITY CONTENT",
